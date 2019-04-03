@@ -1,0 +1,552 @@
+---
+title: "Create Data - Crime"
+author: "Christopher Prener, Ph.D."
+date: '(`r format(Sys.time(), "%B %d, %Y")`)'
+output: 
+  github_document: default
+  html_notebook: default 
+---
+
+## Introduction
+This notebook creates the crime data sets needed for the arson analyses.
+
+## Dependencies
+This notebook requires a number of packages to working with data and wrangling it.
+
+```{r load-packages}
+# tidystl packages
+library(compstatr)
+library(gateway)
+library(postmastr)
+
+# tidyverse packages
+library(dplyr)
+library(purrr)
+library(readr)
+library(stringr)
+
+# spatial packages
+library(mapview)
+library(sf)
+
+# other packages
+library(here)
+library(janitor)
+library(testthat)
+```
+
+## Prepare Data
+### Load Raw Data
+Next, we load year-list objects using `cs_load_year()`:
+
+```{r load-data}
+data2018_raw <- cs_load_year(here("data", "raw", "2018"))
+data2017_raw <- cs_load_year(here("data", "raw", "2017"))
+data2016_raw <- cs_load_year(here("data", "raw", "2016"))
+data2015_raw <- cs_load_year(here("data", "raw", "2015"))
+data2014_raw <- cs_load_year(here("data", "raw", "2014"))
+data2013_raw <- cs_load_year(here("data", "raw", "2013"))
+data2012_raw <- cs_load_year(here("data", "raw", "2012"))
+data2011_raw <- cs_load_year(here("data", "raw", "2011"))
+data2010_raw <- cs_load_year(here("data", "raw", "2010"))
+data2009_raw <- cs_load_year(here("data", "raw", "2009"))
+data2008_raw <- cs_load_year(here("data", "raw", "2008"))
+```
+
+### 2018
+We validate the data to make sure it can be collapsed using `cs_validate()`:
+
+```{r validate-data18}
+cs_validate(data2018_raw, year = "2018")
+```
+
+Since the validation result is a value of `TRUE`, we can proceed to collapsing the year-list object into a single tibble with `cs_collapse()` and then stripping out crimes reported in 2018 for earlier years using `cs_combine()`. We also strip out unfounded crimes that remain using `cs_filter_count()`:
+
+```{r collapse-data18}
+# collapse into single object
+data2018_raw <- cs_collapse(data2018_raw)
+
+# combine and filter
+cs_combine(type = "year", date = 2018, data2018_raw) %>%
+  cs_filter_count(var = Count) -> data2018
+```
+
+The `data2018` object now contains only crimes reported in 2018.
+
+### 2017
+We'll repeat the validation process with the 2017 data:
+
+```{r validate-data17}
+cs_validate(data2017_raw, year = "2017")
+```
+
+Since we fail the validation, we can use the `verbose = TRUE` option to get a summary of where validation issues are occuring. 
+
+```{r validate-data17-verbose}
+cs_validate(data2017_raw, year = "2017", verbose = TRUE)
+```
+
+The data for May 2017 do not pass the validation checks. We can extract this month and confirm that there are too many columns in the May 2017 release. Once we have that confirmed, we can standardize that month and re-run our validation.
+
+```{r fix-may17}
+# extract data and unit test column numbers
+expect_equal(ncol(cs_extract_month(data2017_raw, month = "May")), 26)
+
+# standardize months
+data2017_raw <- cs_standardize(data2017_raw, month = "May", config = 26)
+
+# validate data
+cs_validate(data2017_raw, year = "2017")
+```
+
+We now get a `TRUE` value for `cs_validate()` and can move on to collapsing the 2017 and 2018 raw data objects to create a new object, `data2017`, that contains all known 2017 crimes including those that were reported or upgraded in 2018.
+
+```{r collapse-data17}
+# collapse into single object
+data2017_raw <- cs_collapse(data2017_raw)
+
+# combine and filter
+cs_combine(type = "year", date = 2017, data2018_raw, data2017_raw) %>%
+  cs_filter_count(var = Count) -> data2017
+```
+
+### 2016
+We'll repeat the validation process with the 2016 data:
+
+```{r validate-data16}
+cs_validate(data2016_raw, year = "2016")
+```
+
+Since the validation process passes, we can immediately move on to creating our 2016 data object:
+
+```{r collapse-data16}
+# collapse into single object
+data2016_raw <- cs_collapse(data2016_raw)
+
+# combine and filter
+cs_combine(type = "year", date = 2016, data2018_raw, data2017_raw, data2016_raw) %>%
+  cs_filter_count(var = Count) -> data2016
+```
+
+### 2015
+We'll repeat the validation process with the 2015 data:
+
+```{r validate-data15}
+cs_validate(data2015_raw, year = "2015")
+```
+
+Since the validation process passes, we can immediately move on to creating our 2015 data object:
+
+```{r collapse-data15}
+# collapse into single object
+data2015_raw <- cs_collapse(data2015_raw)
+
+# combine and filter
+cs_combine(type = "year", date = 2015, data2018_raw, data2017_raw, data2016_raw, data2015_raw) %>%
+  cs_filter_count(var = Count) -> data2015
+```
+
+### 2014
+We'll repeat the validation process with the 2014 data:
+
+```{r validate-data14}
+cs_validate(data2014_raw, year = "2014")
+```
+
+
+```{r collapse-data14}
+# collapse into single object
+data2014_raw <- cs_collapse(data2014_raw)
+
+# combine and filter
+cs_combine(type = "year", date = 2014, data2018_raw, data2017_raw, data2016_raw, data2015_raw, data2014_raw) %>%
+  cs_filter_count(var = Count) -> data2014
+```
+
+### 2013
+We'll repeat the validation process with the 2013 data:
+
+```{r validate-data13}
+cs_validate(data2013_raw, year = "2013")
+```
+
+Since we fail the validation, we can use the `verbose = TRUE` option to get a summary of where validation issues are occuring. 
+
+```{r validate-data13-verbose}
+cs_validate(data2013_raw, year = "2013", verbose = TRUE)
+```
+
+The data for January through May, July, and August do not pass the validation checks. We can extract these and confirm that there are not enough columns in each of these releases Once we have that confirmed, we can standardize that month and re-run our validation.
+
+```{r fix-month13}
+# January - extract data, unit test, and standardize
+expect_equal(ncol(cs_extract_month(data2013_raw, month = "January")), 18)
+data2013_raw <- cs_standardize(data2013_raw, month = "January", config = 18)
+
+# February - extract data, unit test, and standardize
+expect_equal(ncol(cs_extract_month(data2013_raw, month = "February")), 18)
+data2013_raw <- cs_standardize(data2013_raw, month = "February", config = 18)
+
+# March - extract data, unit test, and standardize
+expect_equal(ncol(cs_extract_month(data2013_raw, month = "March")), 18)
+data2013_raw <- cs_standardize(data2013_raw, month = "March", config = 18)
+
+# April - extract data, unit test, and standardize
+expect_equal(ncol(cs_extract_month(data2013_raw, month = "April")), 18)
+data2013_raw <- cs_standardize(data2013_raw, month = "April", config = 18)
+
+# May - extract data, unit test, and standardize
+expect_equal(ncol(cs_extract_month(data2013_raw, month = "May")), 18)
+data2013_raw <- cs_standardize(data2013_raw, month = "May", config = 18)
+
+# July - extract data, unit test, and standardize
+expect_equal(ncol(cs_extract_month(data2013_raw, month = "July")), 18)
+data2013_raw <- cs_standardize(data2013_raw, month = "July", config = 18)
+
+# August - extract data, unit test, and standardize
+expect_equal(ncol(cs_extract_month(data2013_raw, month = "August")), 18)
+data2013_raw <- cs_standardize(data2013_raw, month = "August", config = 18)
+
+# validate data
+cs_validate(data2013_raw, year = "2013")
+```
+
+We now get a `TRUE` value for `cs_validate()` and can move on to collapsing our raw data objects to create a new object, `data2013`, that contains all known 2013 crimes including those that were reported or upgraded in subsequent years:
+
+```{r collapse-data13}
+# collapse into single object
+data2013_raw <- cs_collapse(data2013_raw)
+
+# combine and filter
+cs_combine(type = "year", date = 2013, data2018_raw, data2017_raw, data2016_raw, data2015_raw, data2014_raw, data2013_raw) %>%
+  cs_filter_count(var = Count) -> data2013
+```
+
+### 2012
+We'll repeat the validation process with the 2012 data:
+
+```{r validate-data12}
+cs_validate(data2012_raw, year = "2012")
+```
+
+Since we fail the validation, we can use the `verbose = TRUE` option to get a summary of where validation issues are occuring. 
+
+```{r validate-data12-verbose}
+cs_validate(data2012_raw, year = "2012", verbose = TRUE)
+```
+
+Every month contains the incorrect number of variables. We'll address each of these:
+
+```{r fix-month12}
+# January - extract data, unit test
+expect_equal(ncol(cs_extract_month(data2012_raw, month = "January")), 18)
+
+# standardize
+data2012_raw <- cs_standardize(data2012_raw, month = "all", config = 18)
+
+# validate data
+cs_validate(data2012_raw, year = "2012")
+```
+
+We now get a `TRUE` value for `cs_validate()` and can move on to collapsing our raw data objects to create a new object, `data2012`, that contains all known 2012 crimes including those that were reported or upgraded in subsequent years:
+
+```{r collapse-data12}
+# collapse into single object
+data2012_raw <- cs_collapse(data2012_raw)
+
+# combine and filter
+cs_combine(type = "year", date = 2012, data2018_raw, data2017_raw, data2016_raw, data2015_raw, data2014_raw, data2013_raw, data2012_raw) %>%
+  cs_filter_count(var = Count) -> data2012
+```
+
+### 2011
+We'll repeat the validation process with the 2011 data:
+
+```{r validate-data11}
+cs_validate(data2011_raw, year = "2011")
+```
+
+Since we fail the validation, we can use the `verbose = TRUE` option to get a summary of where validation issues are occuring. 
+
+```{r validate-data11-verbose}
+cs_validate(data2011_raw, year = "2011", verbose = TRUE)
+```
+
+Every month contains the incorrect number of variables. We'll address each of these:
+
+```{r fix-month11}
+# January - extract data, unit test
+expect_equal(ncol(cs_extract_month(data2011_raw, month = "January")), 18)
+
+# standardize
+data2011_raw <- cs_standardize(data2011_raw, month = "all", config = 18)
+
+# validate data
+cs_validate(data2011_raw, year = "2011")
+```
+
+We now get a `TRUE` value for `cs_validate()` and can move on to collapsing our raw data objects to create a new object, `data2011`, that contains all known 2011 crimes including those that were reported or upgraded in subsequent years:
+
+```{r collapse-data11}
+# collapse into single object
+data2011_raw <- cs_collapse(data2011_raw)
+
+# combine and filter
+cs_combine(type = "year", date = 2011, data2018_raw, data2017_raw, data2016_raw, data2015_raw, data2014_raw, data2013_raw, data2012_raw, data2011_raw) %>%
+  cs_filter_count(var = Count) -> data2011
+```
+
+### 2010
+We'll repeat the validation process with the 2010 data:
+
+```{r validate-data10}
+cs_validate(data2010_raw, year = "2010")
+```
+
+Since we fail the validation, we can use the `verbose = TRUE` option to get a summary of where validation issues are occuring. 
+
+```{r validate-data10-verbose}
+cs_validate(data2010_raw, year = "2010", verbose = TRUE)
+```
+
+Every month contains the incorrect number of variables. We'll address each of these:
+
+```{r fix-month10}
+# January - extract data, unit test
+expect_equal(ncol(cs_extract_month(data2010_raw, month = "January")), 18)
+
+# standardize all months
+data2010_raw <- cs_standardize(data2010_raw, month = "all", config = 18)
+
+# validate data
+cs_validate(data2010_raw, year = "2010")
+```
+
+We now get a `TRUE` value for `cs_validate()` and can move on to collapsing our raw data objects to create a new object, `data2010`, that contains all known 2010 crimes including those that were reported or upgraded in subsequent years:
+
+```{r collapse-data10}
+# collapse into single object
+data2010_raw <- cs_collapse(data2010_raw)
+
+# combine and filter
+cs_combine(type = "year", date = 2010, data2018_raw, data2017_raw, data2016_raw, data2015_raw, data2014_raw, data2013_raw, data2012_raw, data2011_raw, data2010_raw) %>%
+  cs_filter_count(var = Count) -> data2010
+```
+
+### 2009
+We'll repeat the validation process with the 2009 data:
+
+```{r validate-data09}
+cs_validate(data2009_raw, year = "2009")
+```
+
+Since we fail the validation, we can use the `verbose = TRUE` option to get a summary of where validation issues are occuring. 
+
+```{r validate-data09-verbose}
+cs_validate(data2009_raw, year = "2009", verbose = TRUE)
+```
+
+Every month contains the incorrect number of variables. We'll address each of these:
+
+```{r fix-month09}
+# January - extract data, unit test
+expect_equal(ncol(cs_extract_month(data2009_raw, month = "January")), 18)
+
+# standardize all months
+data2009_raw <- cs_standardize(data2009_raw, month = "all", config = 18)
+
+# validate data
+cs_validate(data2009_raw, year = "2009")
+```
+
+We now get a `TRUE` value for `cs_validate()` and can move on to collapsing our raw data objects to create a new object, `data2009`, that contains all known 2009 crimes including those that were reported or upgraded in subsequent years:
+
+```{r collapse-data09}
+# collapse into single object
+data2009_raw <- cs_collapse(data2009_raw)
+
+# combine and filter
+cs_combine(type = "year", date = 2009, data2018_raw, data2017_raw, data2016_raw, data2015_raw, data2014_raw, data2013_raw, data2012_raw, data2011_raw, data2010_raw, data2009_raw) %>%
+  cs_filter_count(var = Count) -> data2009
+```
+
+### 2008
+We'll repeat the validation process with the 2009 data:
+
+```{r validate-data08}
+cs_validate(data2008_raw, year = "2008")
+```
+
+Since we fail the validation, we can use the `verbose = TRUE` option to get a summary of where validation issues are occuring. 
+
+```{r validate-data08-verbose}
+cs_validate(data2008_raw, year = "2008", verbose = TRUE)
+```
+
+Every month contains the incorrect number of variables. We'll address each of these:
+
+```{r fix-month08}
+# January - extract data, unit test,
+expect_equal(ncol(cs_extract_month(data2008_raw, month = "January")), 18)
+
+# standardize all months
+data2008_raw <- cs_standardize(data2008_raw, month = "all", config = 18)
+
+# validate data
+cs_validate(data2008_raw, year = "2008")
+```
+
+We now get a `TRUE` value for `cs_validate()` and can move on to collapsing our raw data objects to create a new object, `data2008`, that contains all known 2008 crimes including those that were reported or upgraded in subsequent years:
+
+```{r collapse-data08}
+# collapse into single object
+data2008_raw <- cs_collapse(data2008_raw)
+
+# combine and filter
+cs_combine(type = "year", date = 2008, data2018_raw, data2017_raw, data2016_raw, data2015_raw, data2014_raw, data2013_raw, data2012_raw, data2011_raw, data2010_raw, data2009_raw, data2008_raw) %>%
+  cs_filter_count(var = Count) -> data2008
+```
+
+## Clean-up Enviornment
+We can remove the `_raw` objects at this point:
+
+```{r remove-raw}
+rm(data2008_raw, data2009_raw, data2010_raw, data2011_raw, data2012_raw, data2013_raw, data2014_raw, data2015_raw, data2016_raw, data2017_raw, data2018_raw)
+```
+
+## Create Single Table
+Next, we'll create a single table before we remove individual years. We also subset columns to reduce the footprint of the table.
+
+```{r collapse-all}
+bind_rows(data2008, data2009, data2010, data2011, data2012, data2013, data2014, data2015, data2016, data2017, data2018) %>%
+  select(cs_year, DateOccur, Crime, Description, ILEADSAddress, ILEADSStreet, XCoord, YCoord) -> allCrimes
+```
+
+### Clean-up Enviornment
+We'll remove excess objects again:
+
+```{r remove-years}
+rm(data2008, data2009, data2010, data2011, data2012, data2013, data2014, data2015, data2016, data2017, data2018)
+```
+
+## Subset Homicides
+Now that we have a slimmed down data set, we'll subset it by identifying only homicidies that occured between 2008 and 2018:
+
+```{r subset-homicides}
+allHomicides <- cs_filter_crime(allCrimes, var = Crime, crime = "murder")
+```
+
+## Geocode Data
+One issue with these data is that they've been geocoded ahead of time, but in an incomplete fashion:
+
+```{r missing-xy}
+allHomicides %>%
+  cs_missingXY(varX = XCoord, varY = YCoord, newVar = missingXY) %>%
+  tabyl(missingXY)
+```
+
+In the world of geocoding, a 96.27% match rate is actually pretty good, but I'd like to improve on this. 
+
+### Normalize Address Data
+We'll therefore remove the coordinate data and start from scratch, showcasing the `tidystl` approach to open source geocoding. Then, we need to create a single address string. Some intersections are preceded by a 0 for the house number, and we'll want to remove that as well:
+
+```{r create-address-string}
+allHomicides %>%
+  select(-XCoord, -YCoord) %>%
+  mutate(address = str_c(ILEADSAddress, ILEADSStreet, sep = " ")) %>%
+  mutate(address = ifelse(str_detect(string = address, pattern = "^[0\\b]") == TRUE,
+                          str_replace(string = address, pattern = "^[0\\b]", replacement = ""),
+                          address)) %>%
+  mutate(address = str_trim(address)) -> allHomicides
+```
+
+Once we have a single address string with the 0's removed, we can move on to normalizing them. First, we'll check out the types of addresses that the `postmastr` package finds on its initial pass with `pm_identify()`:
+
+```{r identify-addresses}
+allHomicides_pm <- pm_identify(allHomicides, var = address)
+
+pm_evaluate(allHomicides_pm)
+```
+
+We're all over the map here (pun intended) - we have mostly short addresses, some intersections, and then a mix of poorly formatted addresses that can't be adequately matched. We'll clean up the unknown, partial, and full intersections so that they are more consistenty formatted:
+
+```{r re-identify-addresses}
+# clean-up addresses manually
+allHomicides_pm %>%
+  mutate(address = ifelse(pm.id == 226, "KENNEDY FOREST", address)) %>%
+  mutate(address = ifelse(pm.id == 354, "NORTH 1ST ST AT MULLANPHY ST", address)) %>%
+  mutate(address = ifelse(pm.id == 355, "NORTH 1ST ST AT MULLANPHY ST", address)) %>%
+  mutate(address = ifelse(pm.id == 568, "O'FALLON PARK", address)) %>%
+  mutate(address = ifelse(pm.id == 803, NA, address)) %>%
+  mutate(address = ifelse(pm.id == 929, NA, address)) %>%
+  mutate(address = ifelse(pm.id == 961, "O'FALLON PARK", address)) %>%
+  mutate(address = ifelse(pm.id == 962, "O'FALLON PARK", address)) %>%
+  mutate(address = ifelse(pm.id == 1268, NA, address)) -> allHomicides_pm
+
+# re-identify
+allHomicides_pm <- pm_identify(allHomicides_pm, var = address)
+
+# evaluate again
+pm_evaluate(allHomicides_pm)
+```
+
+The remaining unknown addresses are either missing or values like "O'Fallon Park" and "Kennedy Forest". If we can deal with as many problems up front as possible, we'll improve the parser's behavior on these edge case addresses. *The `pm_mutate_raw()` function is desinged to make these types of changes, but it does not currently do so correctly.*
+
+With our data prepped, we can normalize them. The `gateway` package has dictionaries for the key short address components in St. Louis - these can be used out of the box to improve the parser's behavior.
+
+```{r}
+allHomicides_pm <- pm_parse(allHomicides_pm, input = "short", address = address, 
+                            output = "short", new_address = addressClean, 
+                            houseSuf_dict = stl_std_houseSuffix,
+                            dir_dict = stl_std_directions,
+                            street_dict = stl_std_streets,
+                            suffix_dict = stl_std_suffix)
+```
+
+### Build Local Geocoders
+Next, we need to create our full and short geocoders:
+
+```{r}
+geocoder <- gw_build_geocoder(style = "full", class = "tibble", return = "coords")
+geocoder_s <- gw_build_geocoder(style = "short", class = "tibble", return = "coords")
+```
+
+### Geocode
+With our local geocoders built, we'll move on to composite geocoding. If `local` is set to `TRUE`, only our two local geocoders will be used. If `local` is set to `FALSE`, we also use the city address candidate API (with a minimum default threshold set to 90%) and, if addresses are still unmatched, open street map.
+
+```{r}
+allHomicides_gw <- gw_geocode_composite(allHomicides_pm, var = addressClean,
+                                        local_geocoder = geocoder, short_geocoder = geocoder_s,
+                                        local = FALSE, osm = TRUE)
+```
+
+Lets check out how well our composite geocoder preformed:
+
+```{r}
+allHomicides_gw %>%
+  tabyl(source)
+```
+
+We'll also check out how the Open Street Map results are in terms of accuracy:
+
+```{r}
+allHomicides_gw %>% 
+  filter(source == "open street map") %>%
+  st_as_sf(coords = c("x", "y"), crs = 4269) %>%
+  mapview()
+```
+
+An exploration of these data will find at least 8 false positives out of the 24 that are matched. Since accuracy is questionable here, we can also optionally turn Open Street Map off:
+
+```{r}
+allHomicides_gw <- gw_geocode_composite(allHomicides_pm, var = addressClean,
+                                        local_geocoder = geocoder, short_geocoder = geocoder_s,
+                                        local = FALSE, osm = FALSE)
+```
+
+Lets verify that our composite geocoder ran without Open Street Map:
+
+```{r}
+allHomicides_gw %>%
+  tabyl(source)
+```
