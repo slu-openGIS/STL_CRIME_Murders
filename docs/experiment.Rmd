@@ -1,0 +1,106 @@
+---
+title: "An Experiment of Geocoders"
+output: github_document
+---
+
+## Introduction
+In this experiment, we will geocode the same set of addresses using 8 commercially available options.
+
+## Workflow
+Some of the technical stuff is left out of this notebook for the sake of brevity and reduced complexity. For example, in the `source/` folder you will find scripts to reproduce the example dataset, define the geocoding functions, and securely decrypt your API credentials.
+
+First, we'll import the geocoding functions.
+```{r import geocoders}
+source("../source/geocoders.R")
+```
+
+Next, we'll decrypt the credential file. To reproduce these results, you may substitute your own access credentials for each respective geocoder.
+```{r decrypt creds}
+# Decrypt
+#source("../source/Decrypt_creds.R")
+# Import
+creds <- yaml::read_yaml("../creds/credentials.yaml")
+```
+
+We'll then load the premade dataset, housed in the `censusxy` package. We need to briefly manipulate it into a single column data.frame. We use `dplyr` to handle this. We also remove absolute duplicates, which would exagerate the impact of single addresses.
+```{r load data}
+library(dplyr)
+homicides <- censusxy::stl_homicides %>%
+  transmute(address = paste(street_address, city, state)) %>%
+  filter(!duplicated(address))
+```
+
+## Geocoding
+
+Now, we will geocode the same set of addresses using 8 different web services. The results are stored in lists.
+```{r geocode}
+address <- homicides$address[1:25] #SMALL
+
+arcmap   <- batch(address, ArcMap, creds$Esri)
+bing     <- batch(address, Bing, creds$Bing)
+census   <- batch(address, CensusBureau)
+geocodio <- batch(address, Geocodio, creds$Geocodio)
+google   <- batch(address, GoogleMaps, creds$`Google Maps`)
+here     <- batch(address, HERE, creds$HERE$`App ID`, creds$HERE$`App Code`)
+opencage <- batch(address, OpenCage, creds$OpenCage)
+tomtom   <- batch(address, TomTom, creds$TomTom)
+
+```
+
+We must manipulate these results into something more manageable. So, we create a dataframe with columns by provider, with each row containing a matrix with the geocoded coordinates.
+```{r manipulate geo}
+homicides <- homicides[1:25,] #SMALL
+homicides$arcmap   <- t(sapply(arcmap, unlist))
+homicides$bing     <- t(sapply(bing, unlist))
+homicides$census   <- t(sapply(census, unlist))
+homicides$geocodio <- t(sapply(geocodio, unlist))
+homicides$google   <- t(sapply(google, unlist))
+homicides$here     <- t(sapply(here, unlist))
+homicides$opencage <- t(sapply(opencage, unlist))
+homicides$tomtom   <- t(sapply(tomtom, unlist))
+```
+
+## Comparison (THE CODE STARTS TO GET UGLY FROM HERE!)
+
+First we'll evaluate the total match rate:
+```{r match rate}
+summary(is.na(homicides)) # more human readable way to do this (i can read it for now)
+```
+In the sample of the first 10, all had 100% success rates
+
+Next, we'll compare the distances. We're still establishing groud truth using a city master address list, but for the moment, we'll explore the relative distance by calculating an average center and measuring deviance.
+```{r geographic distance}
+# centroid and distance... investigate
+# geosphere::centroid())
+# Imap::gdist
+```
+
+```{r deviance}
+
+mean_lat <- function(x) {mean(c(homicides$arcmap[x,"lat"], homicides$bing[x, "lat"],  homicides$census[x, "lat"], homicides$geocodio[x, "lat"], homicides$google[x, "lat"], homicides$here[x, "lat"], homicides$opencage[x, "lat"], homicides$tomtom[x, "lat"]))}
+
+mean_lon <- function(x) {mean(c(homicides$arcmap[x,"lon"], homicides$bing[x, "lon"],  homicides$census[x, "lon"], homicides$geocodio[x, "lon"], homicides$google[x, "lon"], homicides$here[x, "lon"], homicides$opencage[x, "lon"], homicides$tomtom[x, "lon"]))}
+
+mean_lat_list <- vector("numeric", 25)
+mean_lon_list <- vector("numeric", 25)
+
+for (i in 1:25) {
+  mean_lat_list[i] <- mean_lat(i)
+  mean_lon_list[i] <- mean_lon(i)
+}
+
+
+for (j in c("arcmap", "bing", "census", "geocodio", "google", "here", "opencage", "tomtom")) {
+  l <- vector("numeric", 25)
+  for (i in 1:25) {
+    l[i] <- Imap::gdist(lon.1 = homicides[[j]][i,"lon"],
+            lat.1 = homicides[[j]][i,"lat"],
+            lon.2 = mean_lon_list[i],
+            lat.2 = mean_lat_list[i], units = "m")
+  }
+  homicides[[paste0("dist_",j)]] <- l
+}
+
+summary(homicides)
+```
+

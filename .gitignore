@@ -61,3 +61,5 @@ vignettes/*.pdf
 *.knit.md
 .Rproj.user
 inst/doc
+creds/credentials.yaml
+creds/key.rda
