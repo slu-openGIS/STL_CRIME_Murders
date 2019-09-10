@@ -24,7 +24,7 @@ may substitute your own access credentials for each respective geocoder.
 
 ``` r
 # Decrypt
-#source("../source/Decrypt_creds.R")
+source("../source/Decrypt_creds.R")
 # Import
 creds <- yaml::read_yaml("../creds/credentials.yaml")
 ```

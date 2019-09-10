@@ -17,7 +17,7 @@ source("../source/geocoders.R")
 Next, we'll decrypt the credential file. To reproduce these results, you may substitute your own access credentials for each respective geocoder.
 ```{r decrypt creds}
 # Decrypt
-#source("../source/Decrypt_creds.R")
+source("../source/Decrypt_creds.R")
 # Import
 creds <- yaml::read_yaml("../creds/credentials.yaml")
 ```
