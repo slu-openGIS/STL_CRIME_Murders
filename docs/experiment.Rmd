@@ -34,30 +34,32 @@ homicides <- censusxy::stl_homicides %>%
 Now, we will geocode the same set of addresses using 8 different web services. The results are stored in lists.
 ```{r geocode}
 address <- homicides$address
+# to prevent sleep
+system("caffeinate", wait = FALSE)
 
 arctime <- system.time({arcmap   <- batch(address, ArcMap, creds$Esri)})
-save(arctime, file = "../results/timing/arctime.rda")
+save(arctime, file = "../results/timing/arctime2.rda")
 
 bingtime <- system.time({bing     <- batch(address, Bing, creds$Bing)})
-save(bingtime, file = "../results/timing/bingtime.rda")
+save(bingtime, file = "../results/timing/bingtime2.rda")
 
 censustime <- system.time({census   <- batch(address, CensusBureau)})
-save(censustime, file = "../results/timing/censustime.rda")
+save(censustime, file = "../results/timing/censustime2.rda")
 
 geocodiotime <- system.time({geocodio <- batch(address, Geocodio, creds$Geocodio)})
-save(geocodiotime, file = "../results/timing/geocodiotime.rda")
+save(geocodiotime, file = "../results/timing/geocodiotime2.rda")
 
 googletime <- system.time({google   <- batch(address, GoogleMaps, creds$`Google Maps`)})
-save(googletime, file = "../results/timing/googletime.rda")
+save(googletime, file = "../results/timing/googletime2.rda")
 
 heretime <- system.time({here     <- batch(address, HERE, creds$HERE$`App ID`, creds$HERE$`App Code`)})
-save(heretime, file = "../results/timing/heretime.rda")
+save(heretime, file = "../results/timing/heretime2.rda")
 
 octime <- system.time({opencage <- batch(address, OpenCage, creds$OpenCage)})
-save(octime, file = "../results/timing/octime.rda")
+save(octime, file = "../results/timing/octime2.rda")
 
 tomtime <- system.time({tomtom   <- batch(address, TomTom, creds$TomTom)})
-save(tomtime, file = "../results/timing/tomtime.rda")
+save(tomtime, file = "../results/timing/tomtime2.rda")
 
 ```
 
@@ -95,18 +97,18 @@ mean_lat <- function(x) {mean(c(homicides$arcmap[x,"lat"], homicides$bing[x, "la
 
 mean_lon <- function(x) {mean(c(homicides$arcmap[x,"lon"], homicides$bing[x, "lon"], homicides$geocodio[x, "lon"], homicides$google[x, "lon"], homicides$here[x, "lon"], homicides$opencage[x, "lon"], homicides$tomtom[x, "lon"]))}
 
-mean_lat_list <- vector("numeric", 1664)
-mean_lon_list <- vector("numeric", 1664)
+mean_lat_list <- vector("numeric", 1822)
+mean_lon_list <- vector("numeric", 1822)
 
-for (i in 1:1664) {
+for (i in 1:1822) {
   mean_lat_list[i] <- mean_lat(i)
   mean_lon_list[i] <- mean_lon(i)
 }
 
 
 for (j in c("arcmap", "bing", "geocodio", "google", "here", "opencage", "tomtom")) {
-  l <- vector("numeric", 1664)
-  for (i in 1:1664) {
+  l <- vector("numeric", 1822)
+  for (i in 1:1822) {
     l[i] <- Imap::gdist(lon.1 = homicides[[j]][i,"lon"],
             lat.1 = homicides[[j]][i,"lat"],
             lon.2 = mean_lon_list[i],
